@@ -16,7 +16,7 @@ app = Flask(__name__)
 
 class JsonHelper:
 	def ascii_encode_dict(self, data):
-		ascii_encode = lambda x: x.encode('ascii') if isinstance(x, unicode) else x
+		ascii_encode = lambda x: x.encode('ascii') if isinstance(x, str) else x
 		return dict(map(ascii_encode, pair) for pair in data.items())
 
 	def get_db(self, fname, encode_ascii=True):
@@ -29,7 +29,7 @@ class JsonHelper:
 
 	def dump(self, db, fname):
 		with open(fname, 'w') as outfile:
-			outfile.write(str(db).replace("'", '"').replace('{u"', '{"').replace('[u"', '["').replace(' u"', ' "').encode('ascii','ignore'))
+			outfile.write(str(db).replace("'", '"').replace('{u"', '{"').replace('[u"', '["').replace(' u"', ' "'))
 
 json_helper = JsonHelper()
 
@@ -570,7 +570,6 @@ class MyRequestHandler(WSGIRequestHandler):
 		else:
 			self.log('info', '"%s" %s %s', self.requestline, code, size)
 
-@app.before_first_request
 def launch():
 	global swap_data
 	global comment_data
@@ -590,6 +589,7 @@ def launch():
 
 if __name__ == "__main__":
 	try:
+		launch()
 		app.run(host= '0.0.0.0', port=8000, request_handler=MyRequestHandler)
 	except Exception as e:
 		if str(e).lower() != '[Errno 98] Address already in use'.lower():

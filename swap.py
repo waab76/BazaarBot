@@ -2,7 +2,7 @@ import random
 import sys
 sys.path.insert(0, '.')
 sys.path.insert(0, 'Discord')
-from assign_role import assign_role
+# from assign_role import assign_role
 import Config
 import requests
 import re
