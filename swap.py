@@ -313,12 +313,6 @@ def handle_comment(comment, bot_username, sub, reddit, is_new_comment, sub_confi
 		requests.post(request_url + "/archive-comment/", {'sub_name': sub_config.subreddit_name, 'comment_id': comment.id, 'platform': PLATFORM})
 #		requests.post(request_url + "/remove-comment/", {'sub_name': sub_config.subreddit_name, 'comment_id': comment.id, 'platform': PLATFORM})
 		return True
-	# r/edefinition keeps the bot around as a pet. Have some fun with them here.
-	if str(parent_sub).lower() == "edefinition":
-		print("ALERT! r/edefinition post: redd.it/" + str(parent_post))
-		handle_edefinition(comment)
-		requests.post(request_url + "/remove-comment/", {'sub_name': sub_config.subreddit_name, 'comment_id': comment.id, 'platform': PLATFORM})
-		return True
 	# If this is someone responding to a tag by tagging the bot, we want to ignore them.
 	if isinstance(comment.parent(), praw.models.Comment) and bot_username.lower() in comment.parent().body.lower() and 'automod' not in str(comment.parent().author).lower():
 		requests.post(request_url + "/remove-comment/", {'sub_name': sub_config.subreddit_name, 'comment_id': comment.id, 'platform': PLATFORM})
