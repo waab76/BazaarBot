@@ -1,3 +1,16 @@
+import datetime
+import logging
+from logging.handlers import TimedRotatingFileHandler
+
+handlers = set()
+handlers.add(TimedRotatingFileHandler('/home/ec2-user/BazaarBotServer.log',
+                                      when='W0',
+                                      backupCount=4))
+
+logging.basicConfig(level=logging.INFO, handlers=handlers,
+                    format='%(asctime)s %(levelname)s %(module)s:%(funcName)s %(message)s')
+logging.Formatter.formatTime = (lambda self, record, datefmt=None: datetime.datetime.fromtimestamp(record.created, datetime.timezone.utc).astimezone().isoformat(sep="T",timespec="milliseconds"))
+
 import os
 from flask import Flask, request, render_template, redirect
 import json
@@ -568,9 +581,11 @@ class MyRequestHandler(WSGIRequestHandler):
 		if 200 == code:
 			pass
 		else:
-			self.log('info', '"%s" %s %s', self.requestline, code, size)
+			logging.info('"%s" %s %s', self.requestline, code, size)
+			# self.log('info', '"%s" %s %s', self.requestline, code, size)
 
 def launch():
+	logging.info('Starting server...')
 	global swap_data
 	global comment_data
 	global username_lookup
@@ -593,5 +608,6 @@ if __name__ == "__main__":
 		app.run(host= '0.0.0.0', port=8000, request_handler=MyRequestHandler)
 	except Exception as e:
 		if str(e).lower() != '[Errno 98] Address already in use'.lower():
-			print(e)
-			print(traceback.format_exc())
+			logging.exception(e)
+			# print(e)
+			# print(traceback.format_exc())
