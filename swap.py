@@ -1,3 +1,16 @@
+import datetime
+import logging
+from logging.handlers import TimedRotatingFileHandler
+
+handlers = set()
+handlers.add(TimedRotatingFileHandler('/home/ec2-user/BazaarBot.log',
+                                      when='W0',
+                                      backupCount=4))
+
+logging.basicConfig(level=logging.INFO, handlers=handlers,
+                    format='%(asctime)s %(levelname)s %(module)s:%(funcName)s %(message)s')
+logging.Formatter.formatTime = (lambda self, record, datefmt=None: datetime.datetime.fromtimestamp(record.created, datetime.timezone.utc).astimezone().isoformat(sep="T",timespec="milliseconds"))
+
 import random
 import sys
 sys.path.insert(0, '.')
@@ -11,7 +24,6 @@ import praw
 from praw.models import SubredditHelper
 from prawcore.exceptions import NotFound
 import time
-import datetime
 import argparse
 import wiki_helper
 
@@ -23,7 +35,7 @@ CREDIT_ALREADY_GIVEN_TEXT = "I already have a reference to this trade in my data
 
 def log(post, comment, reason):
 	url = "reddit.com/comments/"+str(post)+"/-/"+str(comment)
-	print("Removing comment " + url + " because: " + reason)
+	logging.info('Removing comment %s because: %s', url, reason)
 
 def create_reddit_and_sub(sub_name):
 	sub_config = Config.Config(sub_name.lower())
@@ -118,7 +130,7 @@ def update_flair(author1, author2, sub_config):
 		try:
 			age = datetime.timedelta(seconds=(time.time() - author.created_utc)).days
 		except Exception as e:
-			print("Unable to get age for " + str(author) + " with error " + str(e) + ". As such, I am unable to update their flair.")
+			logging.exception('Unable to get age for %s. Unable to update flair.', str(author))
 			continue
 		author_string = str(author).lower()
 		updates = []
@@ -136,9 +148,9 @@ def update_flair(author1, author2, sub_config):
 					user_flair_text[author_string] = flair_text
 		if updates:
 			try:
-				print("u/" + author_string + " was updated at the following subreddits with the following flair: \n" + "\n".join(["  * r/"+x[0]+" - "+x[1] for x in updates]))
+				logging.info("u/" + author_string + " was updated at the following subreddits with the following flair: \n" + "\n".join(["  * r/"+x[0]+" - "+x[1] for x in updates]))
 			except Exception as e:
-				print("Unable to log " + author_string + " flair update with error " + str(e))
+				logging.exception('Unable to log %s flair update', author_string)
 	return non_updated_users, user_flair_text
 
 def update_single_user_flair(sub, sub_config, author, swap_count, non_updated_users, age, debug=False):
@@ -149,7 +161,7 @@ def update_single_user_flair(sub, sub_config, author, swap_count, non_updated_us
 	try:
 		mods = [str(x).lower() for x in sub.moderator()]
 	except Exception as e:
-		print("Unable to get mod list from " + sub_config.subreddit_name + " with error " + str(e))
+		logging.exception('Unable to get mod list from %s', sub_config.subreddit_name)
 		return ""
 	if author.lower() in sub_config.black_list:
 		return "" # Silently return
@@ -185,15 +197,14 @@ def update_single_user_flair(sub, sub_config, author, swap_count, non_updated_us
 			else:
 				sub.flair.set(redditor=author, text=flair_text, css_class=swap_count)
 		except Exception as e:
-			print("Error assigning flair to " + str(author) + " on sub " + sub_config.subreddit_name + " with error " + str(e) + ". Please update flair manually.")
+			logging.exception('Error assigning flair to %s on sub %s. Please update flair manually.', str(author), sub_config.subreddit_name)
 		if sub_config.discord_config and discord_role_id:
 			paired_usernames = requests.get(request_url + "/get-paired-usernames/").json()
 			if author in paired_usernames['reddit']:
 				discord_user_id = paired_usernames['reddit'][author]['discord']
 				assign_role(sub_config.discord_config.server_id, discord_user_id, discord_role_id)
 	else:
-		print("Assigning flair " + swap_count + " to user " + author + " with template_id: " + template)
-		print("==========")
+		logging.info('Assigning flair %s to user %s with template_id %s', swap_count, author, template)
 	return flair_text
 
 def set_active_comments_and_messages(reddit, sub, bot_name, comments, messages, new_ids, sub_config):
@@ -216,21 +227,20 @@ def set_active_comments_and_messages(reddit, sub, bot_name, comments, messages, 
 					try:
 						sub_config.subreddit_object.mod.accept_invite()
 					except Exception as e:
-						print("Was unable to accept invitation to moderate " + sub_config.subreddit_name + " with error " + str(e))
+						logging.exception('Unable to accept invitation to moderate %s', sub_config.subreddit_name)
 						continue
 					# This means that we're in action for the first time, so let's also claim our own subreddit
-					print("Attempting to claim r/" + sub_config.bot_username)
+					logging.info('Attempting to claim r/%s', sub_config.bot_username)
 					sh = SubredditHelper(sub_config.reddit, {})
 					try:
 						sh.create(sub_config.bot_username, subreddit_type='private')
 					except Exception as e:
 						if 'SUBREDDIT_EXISTS' in str(e):
-							print("    IMPERSONATION FOUND FOR u/" + sub_config.bot_username)
+							logging.exception('Impersonation found for u/%s', sub_config.bot_username)
 				else:
 					messages.append(message)
 	except Exception as e:
-		print(e)
-		print("Failed to get next message from unreads. Ignoring all unread messages and will try again next time.")
+		logging.exception('Failed to get next message from unreads. Ignoring all unread messages and will try again next time.')
 
 	# Get comments by parsing the most recent comments on the sub.
 	try:
@@ -247,8 +257,7 @@ def set_active_comments_and_messages(reddit, sub, bot_name, comments, messages, 
 					ids.append(new_comment.id)
 					ids_to_comments[new_comment.id] = new_comment
 	except Exception as e:
-		print(e)
-		print(bot_name + " failed to get most recent comments.")
+		logging.exception('Failed to get most recent comments.')
 
 	return_data = requests.post(request_url + "/get-comments/", {'sub_name': sub_config.subreddit_name, 'active': 'True', 'ids': ",".join(ids), 'platform': PLATFORM}).json()
 	ids = return_data['ids']
@@ -261,7 +270,7 @@ def set_active_comments_and_messages(reddit, sub, bot_name, comments, messages, 
 				comment = reddit.comment(comment_id)
 			comments.append(comment)
 		except Exception as e:  # If we fail, the user deleted their comment or account, so skip
-			print("Failed to turn comment id " + comment_id + " into a comment object with bot " + bot_name + " with error " + str(e))
+			logging.exception('Failed to turn comment id %s into a comment object with bot %s', comment_id, bot_name)
 			pass
 
 	if not debug:
@@ -269,8 +278,7 @@ def set_active_comments_and_messages(reddit, sub, bot_name, comments, messages, 
 			try:
 				message.mark_read()
 			except Exception as e:
-				print(e)
-				print("Unable to mark message as read. Leaving it as is.")
+				logging.exception('Unable to mark message as read. Leaving it as is.')
 
 def set_archived_comments(reddit, comments, sub_config):
 	ids = ",".join([comment.id for comment in comments])
@@ -346,7 +354,7 @@ def handle_comment(comment, bot_username, sub, reddit, is_new_comment, sub_confi
 		requests.post(request_url + "/remove-comment/", {'sub_name': sub_config.subreddit_name, 'comment_id': comment.id, 'platform': PLATFORM})
 		return True
 	except Exception as e:
-		print("Could not make a reddit instance with an ID for reddit account: " + desired_author2_string + " with error: " + str(e))
+		logging.exception('Could not make a reddit instance with an ID for reddit account: %s', desired_author2_string)
 	# Remove comments that are in the wrong sub
 	if not str(parent_post.subreddit).lower() == sub_config.subreddit_name.lower():
 		log(parent_post, comment, "Wrong sub - in " + str(parent_post.subreddit).lower() + ", should be in " + sub_config.subreddit_name.lower())
@@ -429,8 +437,7 @@ def handle_comment(comment, bot_username, sub, reddit, is_new_comment, sub_confi
 			return True
 		author2 = correct_reply.author
 		if debug:
-			print("Author1: " + str(author1))
-			print("Author2: " + str(author2))
+			logging.info('Author1: %s Author2: %s', str(author1), str(author2))
 
 		if correct_reply.is_submitter or comment.is_submitter:  # make sure at least one of them is the OP for the post
 			credit_given = update_database(author1, author2, parent_post.id, comment.id, sub_config)
@@ -453,7 +460,7 @@ def handle_comment(comment, bot_username, sub, reddit, is_new_comment, sub_confi
 		if is_new_comment:
 			inform_comment_tracked(comment, desired_author2_string, parent_post, sub_config.subreddit_name, str(author1))
 		if debug:
-			print("No correct looking replies were found")
+			logging.debug('No correct looking replies were found')
 		return False
 
 def get_username_from_text(text, usernames_to_ignore=[]):
@@ -474,12 +481,11 @@ def reply(comment, reply_text):
 				reply = comment.reply(reply_text+kofi_text)
 				reply.mod.lock()
 			else:
-				print(reply_text + "\n==========")
+				logging.info(reply_text)
 		else:
-			print(reply_text + "\n==========")
+			logging.info(reply_text)
 	except Exception as e:  # Comment was probably deleted
-		print(e)
-		print("    Comment: " + str(comment))
+		logging.exception('Comment: %s', str(comment))
 
 def handle_no_author2(comment):
 	reply_text = "You did not tag anyone other than this bot in your comment. Please post a new top level comment tagging this bot and the person you traded with to get credit for the trade."
@@ -576,12 +582,11 @@ def reply_to_message(message, text, sub_config):
 			if not silent:
 				message.reply(text + kofi_text)
 			else:
-				print(text + "\n==========")
+				logging.info(text)
 		except Exception as e:
-			print(sub_config.bot_username + " could not reply to " + str(message.author) + " with error...")
-			print("    " + str(e))
+			logging.exception('%s could not reply to %s', sub_config.bot_username, str(message.author))
 	else:
-		print(text + "\n==========")
+		logging.info(text)
 
 def format_swap_count(trades, sub_config):
 	final_text = ""
@@ -603,7 +608,7 @@ def format_swap_count(trades, sub_config):
 			try:
 				trade_url_sub = trade_url.split("/")[4]
 			except:
-				print("Error getting trade sub url from " + trade_url)
+				logging.exception('Error getting trade sub url from %s', trade_url)
 				continue
 			trade_url_id = trade_url.split("/")[6]
 			final_text += "*  [" + trade_url_sub + "/" + trade_url_id  + "](https://redd.it/" + trade_url_id  + ") - u/" + trade_partner + " (Has " + str(trade_partner_count) + " " + sub_config.flair_word + ")" + "\n\n"
@@ -623,7 +628,8 @@ def find_correct_reply(comment, author1, desired_author2_string, parent_post):
 	try:
 		replies.replace_more(limit=None)
 	except Exception as e:
-		print("Was unable to add more comments down the comment tree when trying to find correct reply with comment: " + str(comment) + " with error: " + str(e) + "\n    parent post: " + str(parent_post) + "\n    author1: " + str(author1) + "\n    author2: u/" + desired_author2_string)
+		logging.exception('Unable to add more comments when trying to find correct reply with comment [%s] parent post [%s] author1 [%s] author2[%s]',
+							str(comment), str(parent_post), str(author1), desired_author2_string)
 #		return None
 	for reply in replies.list():
 		try:
@@ -655,14 +661,16 @@ def main():
 	new_ids = []  # Want to know which IDs are from comments we're just finding for the first time
 	set_active_comments_and_messages(reddit, sub, sub_config.bot_username, comments, messages, new_ids, sub_config)
 
+	logging.info('Starting execution for r/%s', args.sub_name.lower())
+
 	# Process comments
 	if debug:
-		print("Looking through active comments...")
+		logging.debug('Looking through active comments...')
 	for comment in comments:
 		try:
 			comment.refresh()  # Don't know why this is required but it doesnt work without it so dont touch it
 		except: # if we can't refresh a comment, archive it so we don't waste time on it.
-			print("Could not 'refresh' comment: " + str(comment))
+			logging.exception('Could not refresh comment: %s', str(comment))
 			requests.post(request_url + "/archive-comment/", {'sub_name': sub_config.subreddit_name, 'comment_id': comment.id, 'platform': PLATFORM})
 			continue
 		handeled = handle_comment(comment, sub_config.bot_username, sub, reddit, comment.id in new_ids, sub_config)
@@ -679,18 +687,18 @@ def main():
 	is_time_4 = is_time_between(datetime.time(20,0), datetime.time(20,9))
 	if is_time_1 or is_time_2 or is_time_3 or is_time_4 or debug:
 		if debug:
-			print("Looking through archived comments...")
+			logging.debug('Looking through archived comments...')
 		comments = []
 		set_archived_comments(reddit, comments, sub_config)
 		for comment in comments:
 			try:
 				comment.refresh()  # Don't know why this is required but it doesnt work without it so dont touch it
 			except praw.exceptions.ClientException as e:
-				print("Could not 'refresh' archived comment: " + str(comment)+ " with exception: \n    " + str(type(e).__name__) + " - " + str(e) + "\n    Removing comment...")
+				logging.exception('Could not refresh archived comment %s. Removing comment.', str(comment))
 				requests.post(request_url + "/remove-comment/", {'sub_name': sub_config.subreddit_name, 'comment_id': comment.id, 'platform': PLATFORM})
 				continue
 			except Exception as e:
-				print("Could not 'refresh' archived comment: " + str(comment)+ " with exception: \n    " + str(type(e).__name__) + " - " + str(e))
+				logging.exception('Could not refresh archived comment: %s', str(comment))
 				continue
 			time_made = comment.created
 			if time.time() - time_made > 7 * 24 * 60 * 60:  # if this comment is more than seven days old
