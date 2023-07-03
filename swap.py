@@ -362,7 +362,7 @@ def handle_comment(comment, bot_username, sub, reddit, is_new_comment, sub_confi
 		requests.post(request_url + "/remove-comment/", {'sub_name': sub_config.subreddit_name, 'comment_id': comment.id, 'platform': PLATFORM})
 		return True
 	# Remove comments in giveaway posts
-	if "(giveaway)" in parent_post.title.lower():
+	if "WTG" in parent_post.title.lower():
 		log(parent_post, comment, "Post is a giveaway")
 		handle_giveaway(comment)
 		requests.post(request_url + "/remove-comment/", {'sub_name': sub_config.subreddit_name, 'comment_id': comment.id, 'platform': PLATFORM})
@@ -436,8 +436,7 @@ def handle_comment(comment, bot_username, sub, reddit, is_new_comment, sub_confi
 			requests.post(request_url + "/remove-comment/", {'sub_name': sub_config.subreddit_name, 'comment_id': comment.id, 'platform': PLATFORM})
 			return True
 		author2 = correct_reply.author
-		if debug:
-			logging.info('Author1: %s Author2: %s', str(author1), str(author2))
+		logging.debug('Author1: %s Author2: %s', str(author1), str(author2))
 
 		if correct_reply.is_submitter or comment.is_submitter:  # make sure at least one of them is the OP for the post
 			credit_given = update_database(author1, author2, parent_post.id, comment.id, sub_config)
@@ -459,8 +458,7 @@ def handle_comment(comment, bot_username, sub, reddit, is_new_comment, sub_confi
 		# New comments get auto response so users know they've been heard
 		if is_new_comment:
 			inform_comment_tracked(comment, desired_author2_string, parent_post, sub_config.subreddit_name, str(author1))
-		if debug:
-			logging.debug('No correct looking replies were found')
+		logging.debug('No correct looking replies were found')
 		return False
 
 def get_username_from_text(text, usernames_to_ignore=[]):
@@ -521,7 +519,7 @@ def handle_comment_made_too_early(comment):
 	reply(comment, reply_text)
 
 def handle_giveaway(comment):
-	reply_text = "This post is marked as a (giveaway). As such, it cannot be used to confirm any transactions as no transactions have occured. Giveaways are not valid for increasing your feedback score. This comment will not be tracked and no feedback will be given."
+	reply_text = "This post is marked as WTG. As such, it cannot be used to confirm any transactions as no transactions have occured. Giveaways are not valid for increasing your feedback score. This comment will not be tracked and no feedback will be given."
 	reply(comment, reply_text)
 
 def handle_top_level_in_automod(comment):
@@ -661,11 +659,9 @@ def main():
 	new_ids = []  # Want to know which IDs are from comments we're just finding for the first time
 	set_active_comments_and_messages(reddit, sub, sub_config.bot_username, comments, messages, new_ids, sub_config)
 
-	logging.info('Starting execution for r/%s', args.sub_name.lower())
+	logging.debug('Starting execution for r/%s', args.sub_name.lower())
 
 	# Process comments
-	if debug:
-		logging.debug('Looking through active comments...')
 	for comment in comments:
 		try:
 			comment.refresh()  # Don't know why this is required but it doesnt work without it so dont touch it
@@ -686,8 +682,7 @@ def main():
 	is_time_3 = is_time_between(datetime.time(14,0), datetime.time(14,9))
 	is_time_4 = is_time_between(datetime.time(20,0), datetime.time(20,9))
 	if is_time_1 or is_time_2 or is_time_3 or is_time_4 or debug:
-		if debug:
-			logging.debug('Looking through archived comments...')
+		logging.debug('Looking through archived comments...')
 		comments = []
 		set_archived_comments(reddit, comments, sub_config)
 		for comment in comments:

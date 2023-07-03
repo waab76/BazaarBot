@@ -3,6 +3,7 @@
 config.txt
 config
 config/*
+database/*
 archived_config
 archived_config/*
 explore_db.py
