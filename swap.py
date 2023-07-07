@@ -26,6 +26,7 @@ from prawcore.exceptions import NotFound
 import time
 import argparse
 import wiki_helper
+from tools.karma_calculator import formatted_karma
 
 debug = False
 silent = False
@@ -719,22 +720,10 @@ def main():
 		else:
 			reply_header = "Hello,\n\nu/" + username + " has had the following " + str(len(trades)) + " " + sub_config.flair_word + ":\n\n"
 			swap_count_text = format_swap_count(trades, sub_config)
-		# Get a summary of other subs at the bottom of the message
-		sister_sub_text = ""
-		for sister_sub in sub_config.gets_flair_from:
-			sister_sub_count = get_swap_count(username, [sister_sub], PLATFORM)
-			if sister_sub_count > 0:
-				sister_sub_text += "\n\nThis user also has " + str(sister_sub_count) + " " + sub_config.flair_word + " on r/" + sister_sub
-		# Truncate if too large
-		if len(reply_header+swap_count_text+sister_sub_text+kofi_text) > 10000:
-			truncated_text = "* And more..."
-			amount_to_truncate = len(reply_header+swap_count_text+sister_sub_text+kofi_text+truncated_text) + 1 - 10000
-			swap_count_text = swap_count_text[:len(swap_count_text) - amount_to_truncate]
-			swap_count_text = "*".join(swap_count_text.split("*")[:-1])
-		else:
-			truncated_text = ""
+		# Get a summary of shaving sub karma at the bottom of the message
+        shave_sub_karma_text = formatted_karma(praw.models.Redditor(reddit=config.reddit_object, name=username))
 
-		reply_text = reply_header + swap_count_text + truncated_text + sister_sub_text
+		reply_text = reply_header + swap_count_text + shave_sub_karma_text
 
 		reply_to_message(message, reply_text, sub_config)
 
