@@ -721,7 +721,7 @@ def main():
 			reply_header = "Hello,\n\nu/" + username + " has had the following " + str(len(trades)) + " " + sub_config.flair_word + ":\n\n"
 			swap_count_text = format_swap_count(trades, sub_config)
 		# Get a summary of shaving sub karma at the bottom of the message
-        shave_sub_karma_text = formatted_karma(praw.models.Redditor(reddit=config.reddit_object, name=username))
+		shave_sub_karma_text = formatted_karma(praw.models.Redditor(reddit=config.reddit_object, name=username))
 
 		reply_text = reply_header + swap_count_text + shave_sub_karma_text
 
