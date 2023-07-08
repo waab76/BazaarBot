@@ -12,7 +12,8 @@ import time
 
 # id for r/WetShaving is 2rb88
 # id for r/Shave_Bazaar is 2srzg
-sub_ids = ['2rb88', '2srzg']
+# id for r/Wicked_Edge is 2s46m
+sub_ids = ['2rb88', '2srzg', '2s46m']
 
 karma_template = '''
 Shaving subreddit overview for /u/{} for the last 90 days:
