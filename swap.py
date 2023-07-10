@@ -26,13 +26,22 @@ from prawcore.exceptions import NotFound
 import time
 import argparse
 import wiki_helper
-from tools.karma_calculator import formatted_karma
+from tools.karma_calculator import calculate_karma
 
 debug = False
 silent = False
 
 PLATFORM = "reddit"
 CREDIT_ALREADY_GIVEN_TEXT = "I already have a reference to this trade in my database. This can mean one of three things:\n\n* You made two 'different' transactions with one person in this post and expect to get +2 in your flair for it. However, users are only allowed one confirmation per partner per post. Sorry for the inconevnience, but there are no exceptions.\n\n* You or your partner already tried to confirm this transaction in this post already\n\n* Reddit was having issues earlier and I recorded the transaction but just now got around to replying and updating your flair.\n\nRegardless of which situation applies here, both you and your parther's flairs are all set and no further action is required from either of you. Thank you!"
+
+karma_template = '''
+Shaving subreddit overview for /u/{} for the last 90 days:
+
+* {} Submissions
+* {} Comments
+* {} Karma
+'''
+
 
 def log(post, comment, reason):
 	url = "reddit.com/comments/"+str(post)+"/-/"+str(comment)
@@ -363,7 +372,7 @@ def handle_comment(comment, bot_username, sub, reddit, is_new_comment, sub_confi
 		requests.post(request_url + "/remove-comment/", {'sub_name': sub_config.subreddit_name, 'comment_id': comment.id, 'platform': PLATFORM})
 		return True
 	# Remove comments in giveaway posts
-	if "WTG" in parent_post.title.lower():
+	if "wtg" in parent_post.title.lower():
 		log(parent_post, comment, "Post is a giveaway")
 		handle_giveaway(comment)
 		requests.post(request_url + "/remove-comment/", {'sub_name': sub_config.subreddit_name, 'comment_id': comment.id, 'platform': PLATFORM})
@@ -643,6 +652,28 @@ def find_correct_reply(comment, author1, desired_author2_string, parent_post):
 		return reply
 	return None
 
+def build_karma_message(username):
+    karma = 0
+    post_count = 0
+    comment_count = 0
+
+    cache_karma = requests.post(request_url + "/check-karma/", {'username': username}).json()
+    try:
+        karma = cache_karma['karma']
+        post_count = cache_karma['post_count']
+        comment_count = cache_karma['comment_count']
+    except KeyError:
+        logging.info('Karma for user [u/{}] not found in cache, calculating'.format(username))
+        calculated_karma = calculate_karma(praw.models.Redditor(reddit, name=username))
+        karma = calculated_karma[0]
+        post_count = calculated_karma[1]
+        comment_count = calculated_karma[2]
+        try:
+            requests.post(request_url + "/add-karma/", {'username':username, 'post_count': post_count, 'comment_count': comment_count, 'karma': karma}).json()
+        except:
+            logging.exception('Failed to add user karma to cache')
+    return karma_template.format(post_count, comment_count, karma)
+
 def main():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('sub_name', metavar='C', type=str)
@@ -720,8 +751,9 @@ def main():
 		else:
 			reply_header = "Hello,\n\nu/" + username + " has had the following " + str(len(trades)) + " " + sub_config.flair_word + ":\n\n"
 			swap_count_text = format_swap_count(trades, sub_config)
-		# Get a summary of shaving sub karma at the bottom of the message
-		shave_sub_karma_text = formatted_karma(praw.models.Redditor(reddit, name=username))
+
+        # Get a summary of shaving sub karma at the bottom of the message
+        shave_sub_karma_text = build_karma_message(username)
 
 		reply_text = reply_header + swap_count_text + shave_sub_karma_text
 
