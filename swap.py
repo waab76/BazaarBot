@@ -672,7 +672,7 @@ def build_karma_message(reddit, username):
             requests.post(request_url + "/add-karma/", {'username':username, 'post_count': post_count, 'comment_count': comment_count, 'karma': karma}).json()
         except:
             logging.exception('Failed to add user karma to cache')
-    return karma_template.format(post_count, comment_count, karma)
+    return karma_template.format(username, post_count, comment_count, karma)
 
 def main():
 	parser = argparse.ArgumentParser()
