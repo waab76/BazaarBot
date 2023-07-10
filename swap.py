@@ -652,7 +652,7 @@ def find_correct_reply(comment, author1, desired_author2_string, parent_post):
 		return reply
 	return None
 
-def build_karma_message(username):
+def build_karma_message(reddit, username):
     karma = 0
     post_count = 0
     comment_count = 0
@@ -753,7 +753,7 @@ def main():
 			swap_count_text = format_swap_count(trades, sub_config)
 
         # Get a summary of shaving sub karma at the bottom of the message
-        shave_sub_karma_text = build_karma_message(username)
+        shave_sub_karma_text = build_karma_message(reddit, username)
 
 		reply_text = reply_header + swap_count_text + shave_sub_karma_text
 
