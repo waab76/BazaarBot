@@ -4,11 +4,11 @@ from logging.handlers import TimedRotatingFileHandler
 
 handlers = set()
 handlers.add(TimedRotatingFileHandler('/home/ec2-user/BazaarBot.log',
-                                      when='W0',
-                                      backupCount=4))
+									  when='W0',
+									  backupCount=4))
 
 logging.basicConfig(level=logging.INFO, handlers=handlers,
-                    format='%(asctime)s %(levelname)s %(module)s:%(funcName)s %(message)s')
+					format='%(asctime)s %(levelname)s %(module)s:%(funcName)s %(message)s')
 logging.Formatter.formatTime = (lambda self, record, datefmt=None: datetime.datetime.fromtimestamp(record.created, datetime.timezone.utc).astimezone().isoformat(sep="T",timespec="milliseconds"))
 
 import random
@@ -78,11 +78,11 @@ def is_time_between(begin_time, end_time):
 # Method for giving credit to users when they do a trade.
 # Returns True if credit was given, False otherwise
 def update_database(author1, author2, post_id, comment_id, sub_config, top_level_comment_id=""):
-	author1 = str(author1).lower()  # Create strings of the user names for keys and values
+	author1 = str(author1).lower()	# Create strings of the user names for keys and values
 	author2 = str(author2).lower()
 
 	# Default generic value for swaps
-	return_data = requests.post(request_url + "/check-comment/", {'sub_name': sub_config.database_name, 'author1': author1, 'author2': author2, 'post_id': post_id, 'comment_id': comment_id,'top_level_comment_id': top_level_comment_id,  'real_sub_name': sub_config.subreddit_name, 'platform': PLATFORM}).json()
+	return_data = requests.post(request_url + "/check-comment/", {'sub_name': sub_config.database_name, 'author1': author1, 'author2': author2, 'post_id': post_id, 'comment_id': comment_id,'top_level_comment_id': top_level_comment_id,	'real_sub_name': sub_config.subreddit_name, 'platform': PLATFORM}).json()
 	is_duplicate = return_data['is_duplicate'] == 'True'
 	return not is_duplicate
 
@@ -158,7 +158,7 @@ def update_flair(author1, author2, sub_config):
 					user_flair_text[author_string] = flair_text
 		if updates:
 			try:
-				logging.info("u/" + author_string + " was updated at the following subreddits with the following flair: \n" + "\n".join(["  * r/"+x[0]+" - "+x[1] for x in updates]))
+				logging.info("u/" + author_string + " was updated at the following subreddits with the following flair: \n" + "\n".join(["	* r/"+x[0]+" - "+x[1] for x in updates]))
 			except Exception as e:
 				logging.exception('Unable to log %s flair update', author_string)
 	return non_updated_users, user_flair_text
@@ -230,7 +230,7 @@ def set_active_comments_and_messages(reddit, sub, bot_name, comments, messages, 
 				try:
 					ids.append(message.id)
 					ids_to_comments[id] = message
-				except:  # if this fails, the user deleted their account or comment so skip it
+				except:	 # if this fails, the user deleted their account or comment so skip it
 					pass
 			elif not message.was_comment:
 				if 'gadzooks! **you are invited to become a moderator**' in message.body.lower() and message.subreddit != None and message.subreddit.display_name.lower() == sub_config.subreddit_name:
@@ -279,7 +279,7 @@ def set_active_comments_and_messages(reddit, sub, bot_name, comments, messages, 
 			else:
 				comment = reddit.comment(comment_id)
 			comments.append(comment)
-		except Exception as e:  # If we fail, the user deleted their comment or account, so skip
+		except Exception as e:	# If we fail, the user deleted their comment or account, so skip
 			logging.exception('Failed to turn comment id %s into a comment object with bot %s', comment_id, bot_name)
 			pass
 
@@ -326,7 +326,7 @@ def handle_comment(comment, bot_username, sub, reddit, is_new_comment, sub_confi
 		parent_post = parent_post.parent()
 	try:
 		parent_sub = parent_post.subreddit
-	except Exception as e:  # If we can't get the sub, it means the sub is private.
+	except Exception as e:	# If we can't get the sub, it means the sub is private.
 		log(parent_post, comment, "Associated sub is private. Error: " + str(e))
 		requests.post(request_url + "/archive-comment/", {'sub_name': sub_config.subreddit_name, 'comment_id': comment.id, 'platform': PLATFORM})
 #		requests.post(request_url + "/remove-comment/", {'sub_name': sub_config.subreddit_name, 'comment_id': comment.id, 'platform': PLATFORM})
@@ -448,7 +448,7 @@ def handle_comment(comment, bot_username, sub, reddit, is_new_comment, sub_confi
 		author2 = correct_reply.author
 		logging.debug('Author1: %s Author2: %s', str(author1), str(author2))
 
-		if correct_reply.is_submitter or comment.is_submitter:  # make sure at least one of them is the OP for the post
+		if correct_reply.is_submitter or comment.is_submitter:	# make sure at least one of them is the OP for the post
 			credit_given = update_database(author1, author2, parent_post.id, comment.id, sub_config)
 		elif str(parent_post.author).lower() == "automoderator":
 			credit_given = update_database(author1, author2, parent_post.id, comment.id, sub_config, top_level_comment.id)
@@ -492,7 +492,7 @@ def reply(comment, reply_text):
 				logging.info(reply_text)
 		else:
 			logging.info(reply_text)
-	except Exception as e:  # Comment was probably deleted
+	except Exception as e:	# Comment was probably deleted
 		logging.exception('Comment: %s', str(comment))
 
 def handle_no_author2(comment):
@@ -653,32 +653,32 @@ def find_correct_reply(comment, author1, desired_author2_string, parent_post):
 	return None
 
 def build_karma_message(reddit, username):
-    activity = {}
-    cache = {}
-    summary_text = ''
-    try:
-        activity = requests.post(request_url + "/check-karma/", {'username': username}).json()
-        logging.debug('Activity from cache: {}'.format(activity))
-    except:
-        logging.exception('No response from server')
+	activity = {}
+	cache = {}
+	summary_text = ''
+	try:
+		activity = requests.post(request_url + "/check-karma/", {'username': username}).json()
+		logging.debug('Activity from cache: {}'.format(activity))
+	except:
+		logging.exception('No response from server')
 
-    if activity['result'] == 'miss':
-        logging.debug('Fetching activity from Reddit')
-        activity = activity_summary(praw.models.Redditor(reddit, name=username))
+	if activity['result'] == 'miss':
+		logging.debug('Fetching activity from Reddit')
+		activity = activity_summary(praw.models.Redditor(reddit, name=username))
 
-    for sub in ['wetshaving', 'wicked_edge', 'shave_bazaar']:
-        if sub in activity:
-            summary_text += karma_template.format(sub, username, activity[sub]['post_count'], activity[sub]['comment_count'], activity[sub]['karma'])
-            cache[sub] = activity[sub]
-        else:
-            summary_text += karma_template.format(sub, username, 0, 0, 0)
-    try:
-        logging.debug('Saving activity to cache: {}'.format(json.dumps(cache)))
-        requests.post(request_url + "/add-karma/", {'username':username, 'activity': json.dumps(cache)}).json()
-    except:
-        logging.exception('Failed to add user karma to cache')
+	for sub in ['wetshaving', 'wicked_edge', 'shave_bazaar']:
+		if sub in activity:
+			summary_text += karma_template.format(sub, username, activity[sub]['post_count'], activity[sub]['comment_count'], activity[sub]['karma'])
+			cache[sub] = activity[sub]
+		else:
+			summary_text += karma_template.format(sub, username, 0, 0, 0)
+	try:
+		logging.debug('Saving activity to cache: {}'.format(json.dumps(cache)))
+		requests.post(request_url + "/add-karma/", {'username':username, 'activity': json.dumps(cache)}).json()
+	except:
+		logging.exception('Failed to add user karma to cache')
 
-    return summary_text
+	return summary_text
 
 def main():
 	parser = argparse.ArgumentParser()
@@ -734,7 +734,7 @@ def main():
 				logging.exception('Could not refresh archived comment: %s', str(comment))
 				continue
 			time_made = comment.created
-			if time.time() - time_made > 7 * 24 * 60 * 60:  # if this comment is more than seven days old
+			if time.time() - time_made > 7 * 24 * 60 * 60:	# if this comment is more than seven days old
 				inform_comment_deleted(comment)
 				requests.post(request_url + "/remove-comment/", {'sub_name': sub_config.subreddit_name, 'comment_id': comment.id, 'platform': PLATFORM})
 			else:
@@ -744,7 +744,7 @@ def main():
 	# This is for if anyone sends us a message requesting swap data
 	for message in messages:
 		text = (message.body + " " +  message.subject).replace("\n", " ").replace("\r", " ")
-		username = get_username_from_text(text)[2:]  # remove the leading u/ in the username
+		username = get_username_from_text(text)[2:]	 # remove the leading u/ in the username
 		if not username:  # If we didn't find a username, let them know and continue
 			reply_text = "Hi there,\n\nYou did not specify a username to check. Please ensure that you have a user name in the body of the message you just sent me. Please feel free to try again. Thanks!"
 			reply_to_message(message, reply_text, sub_config)
@@ -758,8 +758,8 @@ def main():
 			reply_header = "Hello,\n\nu/" + username + " has had the following " + str(len(trades)) + " " + sub_config.flair_word + ":\n\n"
 			swap_count_text = format_swap_count(trades, sub_config)
 
-        # Get a summary of shaving sub karma at the bottom of the message
-        shave_sub_karma_text = build_karma_message(reddit, username)
+		# Get a summary of shaving sub karma at the bottom of the message
+		shave_sub_karma_text = build_karma_message(reddit, username)
 
 		reply_text = reply_header + swap_count_text + shave_sub_karma_text
 

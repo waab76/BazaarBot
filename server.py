@@ -4,11 +4,11 @@ from logging.handlers import TimedRotatingFileHandler
 
 handlers = set()
 handlers.add(TimedRotatingFileHandler('/home/ec2-user/BazaarBotServer.log',
-                                      when='W0',
-                                      backupCount=4))
+									  when='W0',
+									  backupCount=4))
 
 logging.basicConfig(level=logging.INFO, handlers=handlers,
-                    format='%(asctime)s %(levelname)s %(module)s:%(funcName)s %(message)s')
+					format='%(asctime)s %(levelname)s %(module)s:%(funcName)s %(message)s')
 logging.Formatter.formatTime = (lambda self, record, datefmt=None: datetime.datetime.fromtimestamp(record.created, datetime.timezone.utc).astimezone().isoformat(sep="T",timespec="milliseconds"))
 
 import os
@@ -83,59 +83,59 @@ def get_user_summary(sub_data, author, current_platform):
 
 @app.route('/add-karma/', methods=['POST'])
 def add_karma():
-    """
-    Given a user name and karma data, stores it in the cache
+	"""
+	Given a user name and karma data, stores it in the cache
 
-    Requested Form Params:
-    String username: The name of the user
-    JSON activity: The activity data for the user
-    """
+	Requested Form Params:
+	String username: The name of the user
+	JSON activity: The activity data for the user
+	"""
 
-    cache_key = request.form['username']
-    cache_entry = json.loads(request.form['activity'])
-    cache_entry['timestamp'] = int(time.time())
+	cache_key = request.form['username']
+	cache_entry = json.loads(request.form['activity'])
+	cache_entry['timestamp'] = int(time.time())
 
-    logging.info('Update karma for [{}] to {}'.format(cache_key, cache_entry))
+	logging.info('Update karma for [{}] to {}'.format(cache_key, cache_entry))
 
-    global karma_cache
+	global karma_cache
 
-    karma_cache[cache_key] = cache_entry
+	karma_cache[cache_key] = cache_entry
 
-    response = {'added': 1}
+	response = {'added': 1}
 
-    return jsonify(response)
+	return jsonify(response)
 
 @app.route('/check-karma/', methods=['POST'])
 def check_karma():
-    """
-    If the user has recent karma data, return it.
+	"""
+	If the user has recent karma data, return it.
 
-    Requested Form Params:
-    String username: The name of the user
-    """
-    username = request.form['username']
-    response = {'result':'miss'}
+	Requested Form Params:
+	String username: The name of the user
+	"""
+	username = request.form['username']
+	response = {'result':'miss'}
 
-    logging.info('Karma check for [{}]'.format(username))
+	logging.info('Karma check for [{}]'.format(username))
 
-    global karma_cache
+	global karma_cache
 
-    if username in karma_cache:
-        cache_entry = karma_cache[username]
-        cache_entry_age = int(time.time()) - cache_entry['timestamp']
+	if username in karma_cache:
+		cache_entry = karma_cache[username]
+		cache_entry_age = int(time.time()) - cache_entry['timestamp']
 
-        # Verify the cache entry is < 12 hours old
-        if cache_entry_age < (60 * 60 * 12):
-            logging.debug('[{}] found in cache'.format(username))
-            response = karma_cache[username]
-            response['result'] = 'hit'
-        else:
-            logging.debug('Cache entry has aged out')
-            del karma_cache[username]
-    else:
-        logging.debug('Not found')
+		# Verify the cache entry is < 12 hours old
+		if cache_entry_age < (60 * 60 * 12):
+			logging.debug('[{}] found in cache'.format(username))
+			response = karma_cache[username]
+			response['result'] = 'hit'
+		else:
+			logging.debug('Cache entry has aged out')
+			del karma_cache[username]
+	else:
+		logging.debug('Not found')
 
-    return jsonify(response)
+	return jsonify(response)
 
 @app.route('/add-comment/', methods=['POST'])
 def add_comment():
@@ -647,7 +647,7 @@ def launch():
 	global comment_data
 	global username_lookup
 	global pending_requests
-     #global karma_cache
+	 #global karma_cache
 
 	for fname in os.listdir('database'):
 		if '-swaps.json' in fname:
