@@ -26,7 +26,7 @@ from prawcore.exceptions import NotFound
 import time
 import argparse
 import wiki_helper
-from tools.karma_calculator import calculate_karma
+from tools.karma_calculator import activity_summary
 
 debug = False
 silent = False
@@ -35,7 +35,7 @@ PLATFORM = "reddit"
 CREDIT_ALREADY_GIVEN_TEXT = "I already have a reference to this trade in my database. This can mean one of three things:\n\n* You made two 'different' transactions with one person in this post and expect to get +2 in your flair for it. However, users are only allowed one confirmation per partner per post. Sorry for the inconevnience, but there are no exceptions.\n\n* You or your partner already tried to confirm this transaction in this post already\n\n* Reddit was having issues earlier and I recorded the transaction but just now got around to replying and updating your flair.\n\nRegardless of which situation applies here, both you and your parther's flairs are all set and no further action is required from either of you. Thank you!"
 
 karma_template = '''
-Shaving subreddit overview for /u/{} for the last 90 days:
+r/{} overview for /u/{} for the last 90 days:
 
 * {} Submissions
 * {} Comments
@@ -653,26 +653,32 @@ def find_correct_reply(comment, author1, desired_author2_string, parent_post):
 	return None
 
 def build_karma_message(reddit, username):
-    karma = 0
-    post_count = 0
-    comment_count = 0
-
-    cache_karma = requests.post(request_url + "/check-karma/", {'username': username}).json()
+    activity = {}
+    cache = {}
+    summary_text = ''
     try:
-        karma = cache_karma['karma']
-        post_count = cache_karma['post_count']
-        comment_count = cache_karma['comment_count']
-    except KeyError:
-        logging.info('Karma for user [u/{}] not found in cache, calculating'.format(username))
-        calculated_karma = calculate_karma(praw.models.Redditor(reddit, name=username))
-        karma = calculated_karma[0]
-        post_count = calculated_karma[1]
-        comment_count = calculated_karma[2]
-        try:
-            requests.post(request_url + "/add-karma/", {'username':username, 'post_count': post_count, 'comment_count': comment_count, 'karma': karma}).json()
-        except:
-            logging.exception('Failed to add user karma to cache')
-    return karma_template.format(username, post_count, comment_count, karma)
+        activity = requests.post(request_url + "/check-karma/", {'username': username}).json()
+        logging.debug('Activity from cache: {}'.format(activity))
+    except:
+        logging.exception('No response from server')
+
+    if activity['result'] == 'miss':
+        logging.debug('Fetching activity from Reddit')
+        activity = activity_summary(praw.models.Redditor(reddit, name=username))
+
+    for sub in ['wetshaving', 'wicked_edge', 'shave_bazaar']:
+        if sub in activity:
+            summary_text += karma_template.format(sub, username, activity[sub]['post_count'], activity[sub]['comment_count'], activity[sub]['karma'])
+            cache[sub] = activity[sub]
+        else:
+            summary_text += karma_template.format(sub, username, 0, 0, 0)
+    try:
+        logging.debug('Saving activity to cache: {}'.format(json.dumps(cache)))
+        requests.post(request_url + "/add-karma/", {'username':username, 'activity': json.dumps(cache)}).json()
+    except:
+        logging.exception('Failed to add user karma to cache')
+
+    return summary_text
 
 def main():
 	parser = argparse.ArgumentParser()

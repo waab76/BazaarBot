@@ -88,16 +88,11 @@ def add_karma():
 
     Requested Form Params:
     String username: The name of the user
-    int post_count: The number of posts
-    int comment_count: The number of comments
-    int karma: The karma from the posts and comments
+    JSON activity: The activity data for the user
     """
 
     cache_key = request.form['username']
-    cache_entry = {}
-    cache_entry['post_count'] = request.form['post_count']
-    cache_entry['comment_count'] = request.form['comment_count']
-    cache_entry['karma'] = request.form['karma']
+    cache_entry = json.loads(request.form['activity'])
     cache_entry['timestamp'] = int(time.time())
 
     logging.info('Update karma for [{}] to {}'.format(cache_key, cache_entry))
@@ -119,7 +114,7 @@ def check_karma():
     String username: The name of the user
     """
     username = request.form['username']
-    response = {}
+    response = {'result':'miss'}
 
     logging.info('Karma check for [{}]'.format(username))
 
@@ -133,6 +128,7 @@ def check_karma():
         if cache_entry_age < (60 * 60 * 12):
             logging.debug('[{}] found in cache'.format(username))
             response = karma_cache[username]
+            response['result'] = 'hit'
         else:
             logging.debug('Cache entry has aged out')
             del karma_cache[username]
