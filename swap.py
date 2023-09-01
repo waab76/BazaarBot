@@ -655,7 +655,8 @@ def find_correct_reply(comment, author1, desired_author2_string, parent_post):
 def build_karma_message(reddit, username):
 	activity = {}
 	cache = {}
-	summary_text = ''
+	summary_text = '\n'
+
 	try:
 		activity = requests.post(request_url + "/check-karma/", {'username': username}).json()
 		logging.debug('Activity from cache: {}'.format(activity))
@@ -749,6 +750,20 @@ def main():
 			reply_text = "Hi there,\n\nYou did not specify a username to check. Please ensure that you have a user name in the body of the message you just sent me. Please feel free to try again. Thanks!"
 			reply_to_message(message, reply_text, sub_config)
 			continue
+
+		try:
+			banned = False
+			for ban in sub.banned():
+				if username.lower() in ban.lower():
+					banned = True
+					reply_text = 'u/{} is banned from r/{}\n\nDo NOT trade with this user.'.format(username, sub.display_name)
+					reply_to_message(message, reply_text, sub_config)
+					break
+			if banned:
+				continue
+		except:
+			logging.exception('Unable to check ban status')
+
 		trades = requests.post(request_url + "/get-summary/", {'sub_name': sub_config.database_name, 'current_platform': PLATFORM, 'username': username}).json()['data']
 		# Text based on swaps for this sub
 		if len(trades) == 0:
