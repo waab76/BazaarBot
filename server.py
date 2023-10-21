@@ -32,12 +32,9 @@ class JsonHelper:
 		ascii_encode = lambda x: x.encode('ascii') if isinstance(x, str) else x
 		return dict(map(ascii_encode, pair) for pair in data.items())
 
-	def get_db(self, fname, encode_ascii=True):
+	def get_db(self, fname):
 		with open(fname) as json_data:
-			if encode_ascii:
-				data = json.load(json_data, object_hook=self.ascii_encode_dict)
-			else:
-				data = json.load(json_data)
+			data = json.load(json_data)
 		return data
 
 	def dump(self, db, fname):
@@ -95,7 +92,7 @@ def add_karma():
 	cache_entry = json.loads(request.form['activity'])
 	cache_entry['timestamp'] = int(time.time())
 
-	logging.info('Update karma for [{}] to {}'.format(cache_key, cache_entry))
+	logging.info('Update karma for [{}] to [{}]'.format(cache_key, cache_entry))
 
 	global karma_cache
 
@@ -654,11 +651,11 @@ def launch():
 			try:
 				_db = json_helper.get_db('database/'+fname)
 			except Exception as e:
-				print("Unable to load database for " + fname + " with erro " + str(e))
+				logging.exception("Unable to load database for {}".format(fname))
 				raise e
 			swap_data[fname.split("-")[0]] = _db
 	comment_data = json_helper.get_db(comment_fname)
-	username_lookup = json_helper.get_db(username_lookup_fname, False)
+	username_lookup = json_helper.get_db(username_lookup_fname)
 	pending_requests = json_helper.get_db(pending_requests_fname)
 
 if __name__ == "__main__":
@@ -668,5 +665,3 @@ if __name__ == "__main__":
 	except Exception as e:
 		if str(e).lower() != '[Errno 98] Address already in use'.lower():
 			logging.exception(e)
-			# print(e)
-			# print(traceback.format_exc())

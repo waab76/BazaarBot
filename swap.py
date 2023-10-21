@@ -158,7 +158,7 @@ def update_flair(author1, author2, sub_config):
 					user_flair_text[author_string] = flair_text
 		if updates:
 			try:
-				logging.info("u/" + author_string + " was updated at the following subreddits with the following flair: \n" + "\n".join(["	* r/"+x[0]+" - "+x[1] for x in updates]))
+				logging.info("u/" + author_string + " was updated with the following flair: " + "\n".join([x[1] for x in updates]))
 			except Exception as e:
 				logging.exception('Unable to log %s flair update', author_string)
 	return non_updated_users, user_flair_text
